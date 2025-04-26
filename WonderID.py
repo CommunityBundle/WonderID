@@ -10,7 +10,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 HAAR_PATH = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 HAAR_PROFILE_PATH = cv2.data.haarcascades + "haarcascade_profileface.xml"
 DB_PATH = "vector_database.pkl"
-THRESHOLD = 0.6  
+THRESHOLD = 0.85  
 
 # --- INITIALIZE ---
 face_cascade = cv2.CascadeClassifier(HAAR_PATH)
