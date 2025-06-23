@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 import torch
+import time
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from PIL import Image
 from pathlib import Path
@@ -51,7 +52,8 @@ def extract_feature_vectors(faces, boxes):
         for face in faces:
             with torch.no_grad():
                 # ResNet expects batches => we need to add a batch dimension through unsqueeze(0) => image becomes [1,3,160,160]
-                # the image then got processed and resnet return a 1D vector with 512 feature values then move back to cpu for simple processing and squeeze(0) to remove the batch dimension 
+                # the image then got processed and resnet return a 1D vector with 512 feature values 
+                # then move back to cpu for simple processing and squeeze(0) to remove the batch dimension 
                 embedding = resnet(face.unsqueeze(0).to(device)).cpu().squeeze(0)
                 embeddings.append(embedding)
         return embeddings, boxes
@@ -76,7 +78,7 @@ def detected_features(embeddings, boxes):
                 best_score = score
                 best_match = name
 
-        results.append((best_match, box)) 
+        results.append((best_match,best_score, box)) 
     return results
 
 # ---MAIN LOOP---     
@@ -91,20 +93,26 @@ while True:
         break
 
     if recognizing:
+        start_time = time.time()
         # Load faces
         faces, boxes = preprocessor(frame)
+        detect_time = time.time()
+
         if faces is not None:
             # Get feature_vectors
             embeddings, boxes = extract_feature_vectors(faces, boxes)
             # Retrieve features of a known face 
             results = detected_features(embeddings, boxes)
+            recognize_time = time.time()
             if results:
-                for name, box in results:
+                for name,score,box in results:
                     x1, y1, x2, y2 = map(int, box)
                     # Draw a rectangle around the detected face
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    # Display the name of the recognized person
-                    cv2.putText(frame, name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                    # Display the name & similiarity scores of the recognized person
+                    label = f"{name} ({score:.2f})"
+                    cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+            print(f"Detect time: {detect_time - start_time:.3f}s, Recognize time: {recognize_time - detect_time:.3f}s")
         else:   
             boxes = None
 

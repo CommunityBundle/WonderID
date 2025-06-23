@@ -4,13 +4,14 @@ import numpy as np
 import os
 import pickle
 import face_recognition
+import time
 from sklearn.metrics.pairwise import cosine_similarity
 
 # --- CONFIG ---
 HAAR_PATH = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 HAAR_PROFILE_PATH = cv2.data.haarcascades + "haarcascade_profileface.xml"
 DB_PATH = "vector_database.pkl"
-THRESHOLD = 0.85  
+THRESHOLD = 0.9  
 
 # --- INITIALIZE ---
 face_cascade = cv2.CascadeClassifier(HAAR_PATH)
@@ -92,8 +93,9 @@ while True:
     ret, frame = cap.read()
     if not ret:
         break
-
+    start_time = time.time()
     faces, bboxes = preprocess_faces(frame)
+    detect_time = time.time()
     for i, face in enumerate(faces):
         vector = extract_vector(face)
         if vector is None:
@@ -106,11 +108,12 @@ while True:
             cv2.rectangle(frame, (bboxes[i][0], bboxes[i][1]), (bboxes[i][0] + bboxes[i][2], bboxes[i][1] + bboxes[i][3]), (0, 255, 0), 2)
         elif mode == 'detect':
             name, score = find_best_match(vector, db)
+            recognize_time = time.time()
             label = f"{name} ({score:.2f})"
             x, y, w, h = bboxes[i]
             cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-
+            print(f"Detect time: {detect_time - start_time:.3f}s, Recognize time: {recognize_time - detect_time:.3f}s")
     cv2.imshow("Face Recognition", frame)
     key = cv2.waitKey(1) & 0xFF
     if key == ord('l'):  # Display database
